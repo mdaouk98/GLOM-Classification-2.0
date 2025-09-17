@@ -1,0 +1,62 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environment
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
+
+# Data directories
+data/
+checkpoints/
+metrics/
+runs/
+
+# If you want to include specific files within these directories, use negation rules
+!metrics/*/config_snapshot.yaml
+!metrics/*/logs/*.log
+
+# TensorBoard logs
+runs/
+
+# Miscellaneous
+*.DS_Store
+*.pth
+*.json
+

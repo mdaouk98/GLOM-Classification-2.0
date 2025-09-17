@@ -1,0 +1,91 @@
+# config/default_config.yaml
+
+# Paths Configuration
+paths:
+  run_name: "default_config"
+  output_path_model: default_config
+  output_path_dict: default_config_training_dict
+  hdf5_path: data/images_224.hdf5
+
+# Model Configuration
+model:
+  name: Resnet18  # Options: Resnet18, Resnet34, Resnet50, Resnet101, Resnet152, Densenet121, Densenet169, Densenet201, Vision
+  multihead: False
+  label: 'class'
+  num_classes: 2
+  input_size: 224
+  use_checkpointing: False
+  dropout_p: 0.5
+
+#Multihead Configuration:
+multihead:
+  labels:         ['class',       'stain',      'scanner']
+  num_classes:    [2,             4,            3]
+  loss_functions: ['CrossEntropyLoss', 'FocalLoss', 'CrossEntropyLoss']
+  loss_weights:   [1.0,           0.5,          2.0]
+  
+
+# Optimizer Configuration
+optimizer:
+  type: Adam  # Options: Adam, AdamW
+  learning_rate: 0.0001
+
+# Scheduler Configuration
+scheduler:
+  type: reduce_on_plateau  # Options: reduce_on_plateau, cosine_warm_up
+  factor: 0.1
+  patience: 3
+  warmup_ratio: 0.1
+  
+# HDF5Dataset function configuration
+HDF5Dataset:
+  cache_in_memory: False
+
+# Data Augmentation Configuration
+augmentation:
+  type: basic  # Options: none, basic, advanced, mixup, cutmix
+  mixup_alpha: 1.0
+  cutmix_alpha: 1.0
+
+# Training Parameters
+training:
+  batch_size: 32
+  accumulation_steps: 1
+  epochs: 5
+  folds: 2
+  test_size: 0.15
+  #val_size: 0.15
+  tune_hyperparameters: False
+  n_trials: 20
+  mc_iterations: 1  # Number of Monte Carlo iterations
+  seed: 42
+  use_mixed_precision: True
+  early_stopping_patience: 7
+  early_stopping_delta: 0.001
+  gradient_clipping: 1.0
+  
+  
+# Profiler Configuration
+profiler:
+  activation: False
+  wait_steps: 1
+  warmup_steps: 1
+  active_steps: 3
+  repeat: 2
+
+# Tensorboard Configuration
+tensorboard:
+  activation: False
+
+# Miscellaneous Settings
+misc:
+  cuda: 1
+  criterion_weight: weight10 # Options: 'None', 'equal_weight', 'weight10'
+  
+data:
+  num_workers: 20
+  prefetch_factor : 20
+  
+
+# Loss Function
+loss_function: TotalCrossEntropyLoss  # Options: 'CrossEntropyLoss','ReverseCrossEntropyLoss', 'TotalCrossEntropyLoss', 'FocalLoss'

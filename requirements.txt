@@ -1,0 +1,37 @@
+
+# Core libraries
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch
+torchvision
+torchaudio
+transformers
+h5py
+numpy
+pandas
+scikit-learn
+optuna
+albumentations
+tqdm
+Pillow
+opencv-python  # For image processing tasks
+
+# Data processing and validation
+pyyaml
+pydantic
+
+# Visualization and logging
+tensorboard
+matplotlib
+
+# Miscellaneous utilities
+pre-commit
+pytest
+torchmetrics
+
+# Optional for CUDA support (replace <version> as needed)
+nvidia-pyindex
+#nvidia-torch==2.0.0  # Torch compiled with CUDA
+
+# Environment setup
+ipython
+jupyter

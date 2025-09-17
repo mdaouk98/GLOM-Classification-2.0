@@ -1,0 +1,53 @@
+paths:
+  run_name: image_size_1024/augmentation_none/scheduler_type_reduce_on_plateau/criterion_weight_None/optimizer_type_AdamW/optimizer_lr_0.01/loss_function_CrossEntropyLoss/model_Densenet169
+  output_path_model: model
+  output_path_dict: training_dict
+  hdf5_path: data/images_1024.hdf5
+model:
+  name: Densenet169
+  num_classes: 2
+  input_size: 1024
+  use_checkpointing: false
+  dropout_p: 0.5
+optimizer:
+  type: AdamW
+  learning_rate: 0.01
+scheduler:
+  type: reduce_on_plateau
+  factor: 0.1
+  patience: 3
+  warmup_ratio: 0.1
+HDF5Dataset:
+  cache_in_memory: true
+augmentation:
+  type: none
+  mixup_alpha: 1.0
+  cutmix_alpha: 1.0
+training:
+  batch_size: 32
+  epochs: 50
+  folds: 5
+  test_size: 0.15
+  tune_hyperparameters: false
+  n_trials: 20
+  mc_iterations: 50
+  seed: 42
+  use_mixed_precision: true
+  early_stopping_patience: 7
+  early_stopping_delta: 0.001
+  gradient_clipping: 1.0
+profiler:
+  activation: false
+  wait_steps: 1
+  warmup_steps: 1
+  active_steps: 3
+  repeat: 2
+tensorboard:
+  activation: false
+misc:
+  cuda: 7
+  criterion_weight: None
+data:
+  num_workers: 4
+  prefetch_factor: 4
+loss_function: CrossEntropyLoss
