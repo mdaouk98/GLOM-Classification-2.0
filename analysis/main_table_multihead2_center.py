@@ -44,6 +44,13 @@ train_val_idx, train_val_lbls, test_idx, test_lbls = split_data(
 )
 print(f"test labaels shape: {np.array(test_lbls).shape}, unique labels: {np.unique(test_lbls)}")
 
+test_stains = np.array(all_stain)[test_idx]
+unique_test_stains = np.unique(test_stains)
+print(
+    "Test stain distribution: ",
+    {stain: np.sum(test_stains == stain) for stain in unique_test_stains}
+)
+
 
 
 # Iterate over the different hyperparameters
@@ -138,8 +145,106 @@ for model_index, model in enumerate(['Resnet18', 'Resnet34', 'Resnet50', 'Resnet
                     # cm[i,i] is # correct in class i; cm.sum(axis=1)[i] is total true class-i
                     class_acc = cm.diagonal() / cm.sum(axis=1).astype(float)
                 
+                    per_stain_metrics = {}
+
+                    if key == 'class':
+                        if len(test_stains) != labels.shape[0]:
+                            print(
+                                "Skipping per-stain metrics: mismatch between"
+                                f" stain labels ({len(test_stains)}) and"
+                                f" predictions ({labels.shape[0]})."
+                            )
+                        else:
+                            for stain_value in unique_test_stains:
+                                stain_mask = test_stains == stain_value
+                                if not np.any(stain_mask):
+                                    continue
+
+                                labels_subset = labels[stain_mask]
+                                preds_subset = preds[stain_mask]
+                                softmax_subset = mean_softmax[stain_mask]
+                                softmax_iters_subset = softmax_iters[:, stain_mask, :]
+
+                                stain_accuracy = accuracy_score(
+                                    labels_subset,
+                                    preds_subset
+                                )
+                                stain_precision = precision_score(
+                                    labels_subset,
+                                    preds_subset,
+                                    average='macro',
+                                    zero_division=0
+                                )
+                                stain_recall = recall_score(
+                                    labels_subset,
+                                    preds_subset,
+                                    average='macro',
+                                    zero_division=0
+                                )
+                                stain_f1 = f1_score(
+                                    labels_subset,
+                                    preds_subset,
+                                    average='macro',
+                                    zero_division=0
+                                )
+
+                                try:
+                                    unique_subset_labels = np.unique(labels_subset)
+                                    if (
+                                        n_classes == 2
+                                        and len(unique_subset_labels) == 2
+                                    ):
+                                        stain_auc = roc_auc_score(
+                                            labels_subset,
+                                            softmax_subset[:, 1]
+                                        )
+                                    else:
+                                        lb_subset = label_binarize(
+                                            labels_subset,
+                                            classes=np.arange(n_classes)
+                                        )
+                                        stain_auc = roc_auc_score(
+                                            lb_subset,
+                                            softmax_subset,
+                                            multi_class='ovr',
+                                            average='macro'
+                                        )
+                                except ValueError:
+                                    stain_auc = np.nan
+
+                                stain_uncertainty = compute_uncertainty(
+                                    softmax_iters_subset
+                                )
+
+                                cm_subset = confusion_matrix(
+                                    labels_subset,
+                                    preds_subset,
+                                    labels=np.arange(n_classes)
+                                )
+                                with np.errstate(divide='ignore', invalid='ignore'):
+                                    stain_class_acc = np.divide(
+                                        cm_subset.diagonal().astype(float),
+                                        cm_subset.sum(axis=1).astype(float),
+                                        out=np.full(n_classes, np.nan),
+                                        where=cm_subset.sum(axis=1) != 0
+                                    )
+
+                                per_stain_metrics.update({
+                                    f'PerStain_{stain_value}_Accuracy': stain_accuracy,
+                                    f'PerStain_{stain_value}_Precision': stain_precision,
+                                    f'PerStain_{stain_value}_Recall': stain_recall,
+                                    f'PerStain_{stain_value}_F1': stain_f1,
+                                    f'PerStain_{stain_value}_AUC': stain_auc,
+                                    f'PerStain_{stain_value}_Uncertainty': stain_uncertainty,
+                                })
+
+                                for class_index, class_value in enumerate(stain_class_acc):
+                                    per_stain_metrics[
+                                        f'PerStain_{stain_value}_Acc_class_{class_index}'
+                                    ] = class_value
+
                     # 2) stash everything in your dict_metrics
-                    
+
                     dict_metrics[key]=({
                         'Model': model,
                         'Scale': scale_multiplier,
@@ -153,7 +258,8 @@ for model_index, model in enumerate(['Resnet18', 'Resnet34', 'Resnet50', 'Resnet
                         'Uncertainty': uncertainty,
                         # now append one field per class:
                         **{ f'Acc_class_{i}': class_acc[i]
-                            for i in range(n_classes) }
+                            for i in range(n_classes) },
+                        **per_stain_metrics
                             })
                 num_epochs_trained = data['num_epochs_trained']
         
