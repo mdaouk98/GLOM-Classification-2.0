@@ -32,7 +32,7 @@ args = parser.parse_args()
 
 
 # Load configuration and set up directories.
-config_path = f"configs/bias2/stain/scale_0.0/model_{args.model[0]}.yaml"
+config_path = f"configs/bias2_corr/stain/scale_0.0/model_{args.model[0]}.yaml"
 config = load_config(config_path)
 
 # Setup device and seed.
