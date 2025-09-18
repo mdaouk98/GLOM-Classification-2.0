@@ -76,6 +76,9 @@ FOLDS = range(1, 6)
 BIAS_HEAD = "scanner"
 
 
+logger = logging.getLogger(__name__)
+
+
 def compute_uncertainty(softmax_array: np.ndarray) -> float:
     """Calculate predictive entropy (uncertainty)."""
 
@@ -96,24 +99,30 @@ def load_dataset(config_path: str) -> Dict[str, np.ndarray]:
             all_scanner,
             total_samples,
         ) = load_hdf5_data(config)
-        print(f"Total samples loaded: {total_samples}")
-        print(
-            "All labels shape:",
-            np.array(all_labels).shape,
-            ", unique labels:",
-            np.unique(all_labels),
+        logger.info("Total samples loaded: %s", total_samples)
+        if isinstance(all_labels, dict):
+            logger.info(
+                "Available label heads: %s",
+                ", ".join(sorted(all_labels.keys())),
+            )
+        else:
+            labels_array = np.asarray(all_labels)
+            logger.debug(
+                "All labels shape: %s, unique labels: %s",
+                labels_array.shape,
+                np.unique(labels_array),
+            )
+        stain_array = np.asarray(all_stain)
+        logger.debug(
+            "All stains shape: %s, unique stains: %s",
+            stain_array.shape,
+            np.unique(stain_array),
         )
-        print(
-            "All stains shape:",
-            np.array(all_stain).shape,
-            ", unique stains:",
-            np.unique(all_stain),
-        )
-        print(
-            "All scanners shape:",
-            np.array(all_scanner).shape,
-            ", unique scanners:",
-            np.unique(all_scanner),
+        scanner_array = np.asarray(all_scanner)
+        logger.debug(
+            "All scanners shape: %s, unique scanners: %s",
+            scanner_array.shape,
+            np.unique(scanner_array),
         )
     except DataLoadingError as exc:  # pragma: no cover - logging for runtime visibility
         logging.error("[Data Loading] %s", exc)
@@ -134,24 +143,23 @@ def load_dataset(config_path: str) -> Dict[str, np.ndarray]:
 
     test_class_labels = labels_by_head.get("class")
     if test_class_labels is not None:
-        print(
-            "Test class labels shape:",
+        logger.debug(
+            "Test class labels shape: %s, unique labels: %s",
             test_class_labels.shape,
-            ", unique labels:",
             np.unique(test_class_labels),
         )
 
     test_stains = np.array(all_stain)[test_idx]
     unique_test_stains = np.unique(test_stains)
-    print(
-        "Test stain distribution:",
+    logger.info(
+        "Test stain distribution: %s",
         {stain: np.sum(test_stains == stain) for stain in unique_test_stains},
     )
 
     test_scanners = np.array(all_scanner)[test_idx]
     unique_test_scanners = np.unique(test_scanners)
-    print(
-        "Test scanner distribution:",
+    logger.info(
+        "Test scanner distribution: %s",
         {
             scanner: np.sum(test_scanners == scanner)
             for scanner in unique_test_scanners
@@ -192,14 +200,14 @@ def load_metric_file(metric_path: str) -> Optional[Dict]:
     """Load metrics from disk, handling missing files and JSON errors."""
 
     if not os.path.exists(metric_path):
-        print(f"File not found: {metric_path}. Skipping.")
+        logger.warning("File not found: %s. Skipping.", metric_path)
         return None
 
     try:
         with open(metric_path, "r", encoding="utf-8") as metric_file:
             return json.load(metric_file)
     except json.decoder.JSONDecodeError as exc:
-        print(f"Error decoding JSON in {metric_path}: {exc}")
+        logger.error("Error decoding JSON in %s: %s", metric_path, exc)
     return None
 
 
@@ -217,7 +225,7 @@ def compute_auc(labels: np.ndarray, mean_softmax: np.ndarray) -> float:
             roc_auc_score(lb, mean_softmax, multi_class="ovr", average="macro")
         )
     except ValueError as exc:
-        print(f"Error computing AUC : {exc}")
+        logger.warning("Error computing AUC: %s", exc)
         return float("nan")
 
 
@@ -236,10 +244,12 @@ def compute_per_bias_metrics(
     per_bias_metrics: Dict[str, float] = {}
 
     if len(bias_values) != labels.shape[0]:
-        print(
-            f"Skipping per-{prefix.lower()} metrics: mismatch between",
-            f" {prefix.lower()} labels ({len(bias_values)}) and",
-            f" predictions ({labels.shape[0]}).",
+        logger.warning(
+            "Skipping per-%s metrics: mismatch between %s labels (%d) and predictions (%d).",
+            prefix.lower(),
+            prefix.lower(),
+            len(bias_values),
+            labels.shape[0],
         )
         return per_bias_metrics
 
@@ -528,14 +538,18 @@ def process_metric_data(
     labels_by_head: Dict[str, np.ndarray] = dataset_info.get("labels_by_head", {})
 
     for key, logits in logits_dict.items():
-        print(
-            f"Processing {key} for model {model}, scale {scale_multiplier}, "
-            f"cluster {cluster}, fold {fold}"
+        logger.info(
+            "Processing head '%s' for model %s, scale %.2f, cluster %d, fold %d",
+            key,
+            model,
+            scale_multiplier,
+            cluster,
+            fold,
         )
         key_list.append(key)
 
         logits_iters = np.array(logits)
-        print(f"logits_iters shape: {logits_iters.shape}")
+        logger.debug("logits_iters shape: %s", logits_iters.shape)
         softmax_iters = softmax(logits_iters, axis=2)
 
         stain_info: Optional[Dict[str, np.ndarray]] = None
@@ -546,7 +560,7 @@ def process_metric_data(
             if label_source is None and key in labels_dict:
                 label_source = labels_dict.get(key)
             if label_source is None:
-                print(f"No labels available for head '{key}'. Skipping.")
+                logger.warning("No labels available for head '%s'. Skipping.", key)
                 continue
 
             labels = np.asarray(label_source)
@@ -568,7 +582,9 @@ def process_metric_data(
                 if bias_labels is None and key in labels_dict:
                     bias_labels = labels_dict.get(key)
                 if bias_labels is None:
-                    print(f"No labels available for bias head '{key}'. Skipping.")
+                    logger.warning(
+                        "No labels available for bias head '%s'. Skipping.", key
+                    )
                     continue
                 labels = np.asarray(bias_labels)
         else:
@@ -576,14 +592,13 @@ def process_metric_data(
             if label_source is None and key in labels_dict:
                 label_source = labels_dict.get(key)
             if label_source is None:
-                print(f"No labels available for head '{key}'. Skipping.")
+                logger.warning("No labels available for head '%s'. Skipping.", key)
                 continue
             labels = np.asarray(label_source)
 
-        print(
-            "labels shape:",
+        logger.debug(
+            "labels shape: %s, unique labels: %s",
             labels.shape,
-            ", unique labels:",
             np.unique(labels),
         )
 
@@ -622,6 +637,7 @@ def process_model(
 ) -> None:
     """Process all combinations of hyperparameters for a given model."""
 
+    logger.info("Processing model %s", model)
     for scale_multiplier in scale_multipliers:
         for cluster in clusters:
             for fold in folds:
@@ -664,6 +680,8 @@ def main(
 ) -> None:
     """Entry point for generating the multihead evaluation tables."""
 
+    logging.basicConfig(level=logging.INFO)
+    logger.info("Loading dataset using config at %s", config_path)
     dataset_info = load_dataset(config_path)
 
     metrics_list: List[Dict[str, float]] = []
@@ -684,6 +702,7 @@ def main(
         )
 
     if detailed_metrics:
+        logger.info("Saving detailed metrics to %s", output_path)
         save_detailed_metrics(detailed_metrics, output_path)
 
 
