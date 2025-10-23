@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import random
 
-def set_seed(seed: int):
+def set_seed(deterministic: bool, seed: int):
     """
     Set random seeds across various libraries for reproducible experiments.
 
@@ -28,6 +28,7 @@ def set_seed(seed: int):
     # 5) Configure CuDNN for reproducibility:
     #    - deterministic: forces cuDNN to use only deterministic convolution algorithms
     #    - benchmark=False: disables the auto-tuner that selects best algorithm at runtime
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = deterministic
+    torch.backends.cudnn.benchmark = not deterministic
+
 
