@@ -131,9 +131,11 @@ class MiscConfig(BaseModel):
     Miscellaneous settings:
     - cuda: GPU index to use.
     - criterion_weight: default class weighting for CrossEntropy variants.
+    - deterministic: True to ensure reproducibility at the cost of speed training.
     """
     cuda: int = 1
     criterion_weight: Literal['None', 'equal_weight', 'weight10'] = 'None'
+    deterministic = True
 
 class DataConfig(BaseModel):
     """DataLoader settings for performance."""
@@ -176,3 +178,4 @@ def load_config(config_path: str) -> Config:
     with open(config_path, 'r') as f:
         raw = yaml.safe_load(f)
     return Config(**raw)
+
