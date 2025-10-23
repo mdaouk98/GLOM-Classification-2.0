@@ -75,7 +75,7 @@ def main(config_path: str, resume_checkpoint: str, full_dataset: HDF5Dataset) ->
 
     # --- 4) Setup compute device & random seed ---
     device = setup_device(config)
-    set_seed(config.training.seed)
+    set_seed(config.misc.deterministic, config.training.seed)
 
     # --- 5) Prepare transforms / processor for data ---
     transform_train, transform_val, processor, for_vision = setup_transforms_and_processor(config)
@@ -194,6 +194,7 @@ def main(config_path: str, resume_checkpoint: str, full_dataset: HDF5Dataset) ->
         if writer:
             writer.close()
             logging.info("[Main] TensorBoard writer closed")
+
 
 
 
