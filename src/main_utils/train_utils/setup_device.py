@@ -39,8 +39,10 @@ def setup_device(config: Any) -> torch.device:
         logging.info("[Device Setup] CUDA not available. Falling back to CPU.")
 
     # 3) Enable CuDNN benchmark for optimized convolution performance
-    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.deterministic = config.misc.deterministic
+    torch.backends.cudnn.benchmark = not config.misc.deterministic
 
     logging.info(f"[Device Setup] Final device: {device}")
     return device
+
 
