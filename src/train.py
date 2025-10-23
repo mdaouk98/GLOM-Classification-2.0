@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # --- 1) Load config & set up device/seed ---
     config = load_config(args.config)
     device = setup_device(config)
-    set_seed(config.training.seed)
+    set_seed(config.misc.deterministic, config.training.seed)
     info(f"[Startup] Using device: {device}")
     info(f"[Startup] Loaded config from: {args.config}")
 
